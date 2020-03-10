@@ -3,13 +3,17 @@
 #include<vector>
 #include <fstream>
 #include <string>
+#include<vector>
 using namespace std;
 
 class dot {
 public:
 	double x;
 	double y;
+
 	dot(double x, double y);
+
+	void dotinsert(dot d);
 };
 
 class line {
@@ -24,6 +28,10 @@ public:
 	void lintersrctl(int _a, int _b, int _c);
 
 	dot lintersrctl(line l);
+
+	bool _lintersrctl(line l);
+
+	void lineinsert(line l);
 };
 
 class cycle {
@@ -36,23 +44,20 @@ public:
 
 	void cintersectl(line l);
 
-	void cintersectc(int x, int y, int r);
+	bool cintersectc(int x, int y, int r);
+
+	void cycleinsert(cycle c);
 };
 
 vector<dot> dots;
 vector<line> lines;
 vector<cycle> cycles;
 
-void dotinsert(dot d) {
-	for (int i = 0; i < dots.size(); i++) {
-		if (fabs(dots[i].x - d.x) < 0.00000001 && fabs(dots[i].y - d.y) < 0.00000001)
-		//if (dots[i].x == d.x && dots[i].y == d.y)
-			return;
-	}
-	dots.push_back(d);
-}
+void solve();
 
-void lineinsert(line l) {
+using namespace std;
+
+void line::lineinsert(line l) {
 	for (int i = 0; i < lines.size(); i++) {
 		if (lines[i].a == l.a && lines[i].b == l.b && lines[i].c == l.c)
 			return;
@@ -60,7 +65,7 @@ void lineinsert(line l) {
 	lines.push_back(l);
 }
 
-void cycleinsert(cycle c) {
+void cycle::cycleinsert(cycle c) {
 	for (int i = 0; i < cycles.size(); i++) {
 		if (cycles[i].x == c.x && cycles[i].y == c.y && cycles[i].r == c.r)
 			return;
@@ -71,6 +76,15 @@ void cycleinsert(cycle c) {
 dot::dot(double _x, double _y) {
 	x = _x;
 	y = _y;
+}
+
+void dot::dotinsert(dot d) {
+	for (int i = 0; i < dots.size(); i++) {
+		if (fabs(dots[i].x - d.x) < 0.00000001 && fabs(dots[i].y - d.y) < 0.00000001)
+			//if (dots[i].x == d.x && dots[i].y == d.y)
+			return;
+	}
+	dots.push_back(d);
 }
 
 cycle::cycle(int _x, int _y, int _r) {
@@ -111,7 +125,15 @@ void line::lintersrctl(int _a, int _b, int _c) {
 	double x = t3 / t4;
 	double y = t1 / t2;
 	dot d = dot::dot(x, y);
-	dotinsert(d);
+	d.dotinsert(d);
+}
+
+bool line::_lintersrctl(line l) {
+	if (b == 0 && l.b == 0)
+		return false;
+	if (b != 0 && l.b != 0 && a / b == l.a / l.b)
+		return false;
+	return true;
 }
 
 dot line::lintersrctl(line l) {
@@ -133,7 +155,7 @@ void cycle::cintersectl(line l) {
 	if (dis > r)
 		return;
 	if (dis == r) {
-		dotinsert(d);
+		d.dotinsert(d);
 		return;
 	}
 	double n = sqrt(((double)this->r * (double)this->r) - dis * dis);
@@ -142,22 +164,41 @@ void cycle::cintersectl(line l) {
 	if (l.a > 0) dy = -dy;
 	dot d1 = dot(d.x + dx, d.y + dy);
 	dot d2 = dot(d.x - dx, d.y - dy);
-	dotinsert(d1);
-	dotinsert(d2);
+	d1.dotinsert(d1);
+	d2.dotinsert(d2);
 }
 
-void cycle::cintersectc(int x, int y, int r) {
+bool cycle::cintersectc(int x, int y, int r) {
 	double dis = sqrt(pow(((double)this->x - (double)x), 2) + pow(((double)this->y - (double)y), 2));
 	if (dis > ((double)this->r + (double)r))
-		return;
+		return false;
 	if (this->r > r && (dis + (double)r) < (double)this->r)
-		return;
+		return false;
 	if (this->r < r && (dis + (double)this->r) < (double)r)
-		return;
+		return false;
 	double a = ((double)this->x - (double)x) / ((double)this->y - (double)y);
-	double c = ((double)(pow((double)this->r, 2) - pow((double)r, 2) - pow((double)this->x, 2) + pow((double)x, 2) - pow((double)this->y, 2) + pow((double)y ,2))) / (((double)y - (double)this->y) * 2);
+	double c = ((double)(pow((double)this->r, 2) - pow((double)r, 2) - pow((double)this->x, 2) + pow((double)x, 2) - pow((double)this->y, 2) + pow((double)y, 2))) / (((double)y - (double)this->y) * 2);
 	line l = line(a, 1.0, c);
 	cintersectl(l);
+	return true;
+}
+
+void solve() {
+	for (int i = 0; i < lines.size(); i++) {
+		line l = lines[i];
+		for (int j = i + 1; j < lines.size(); j++) {
+			l.lintersrctl(lines[j].a, lines[j].b, lines[j].c);
+		}
+	}
+	for (int i = 0; i < cycles.size(); i++) {
+		cycle c = cycles[i];
+		for (int j = i + 1; j < cycles.size(); j++) {
+			c.cintersectc(cycles[j].x, cycles[j].y, cycles[j].r);
+		}
+		for (int j = 0; j < lines.size(); j++) {
+			c.cintersectl(lines[j]);
+		}
+	}
 }
 
 int main(int argc, char* argv[]) {
@@ -187,7 +228,7 @@ int main(int argc, char* argv[]) {
 					if (str[j] == '-') {
 						j = j + 1;
 						sym = 1;
-					}	
+					}
 					while (str[j] >= 48 && str[j] <= 57) {
 						int temp = (int)(str[j] - 48);
 						x1 = 10 * x1 + temp;
@@ -231,7 +272,7 @@ int main(int argc, char* argv[]) {
 					}
 					if (sym == 1) y2 = -y2;
 					line l = line(x1, x2, y1, y2);
-					lineinsert(l);
+					l.lineinsert(l);
 				}
 				else if (c == 'C') {
 					int x = 0, y = 0, r = 0;
@@ -272,7 +313,7 @@ int main(int argc, char* argv[]) {
 					}
 					if (sym == 1) r = -r;
 					cycle cy = cycle(x, y, r);
-					cycleinsert(cy);
+					cy.cycleinsert(cy);
 				}
 			}
 			else break;
@@ -280,29 +321,13 @@ int main(int argc, char* argv[]) {
 		}//°´ÐÐÏÔÊ¾
 		infile.close();
 	}
-	else
-		cout << "endless.txt doesn't exist" << endl;
-	for (int i = 0; i < lines.size(); i++) {
-		line l = lines[i];
-		for (int j = i + 1; j < lines.size(); j++) {
-			l.lintersrctl(lines[j].a, lines[j].b, lines[j].c);
-		}
-	}
-	for (int i = 0; i < cycles.size(); i++) {
-		cycle c = cycles[i];
-		for (int j = i + 1; j < cycles.size(); j++) {
-			c.cintersectc(cycles[j].x, cycles[j].y, cycles[j].r);
-		}
-		for (int j = 0; j < lines.size(); j++) {
-			c.cintersectl(lines[j]);
-		}
-	} 
+	solve();
 	ofstream outfile;
 	outfile.open(argv[4]);
 	outfile << dots.size();
-/*	for (int i = 0; i < dots.size(); i++) {
-		cout << dots[i].x << " " << dots[i].y << endl;
-	}*/
+	/*	for (int i = 0; i < dots.size(); i++) {
+			cout << dots[i].x << " " << dots[i].y << endl;
+		}*/
 	cout << dots.size();
 	return 0;
 }
